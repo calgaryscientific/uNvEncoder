@@ -39,11 +39,13 @@ public:
     void Initialize();
     void Finalize();
     bool IsValid() const { return encoder_ != nullptr; }
+	void Resize(const uint32_t width, const uint32_t height);
     void Encode(const ComPtr<ID3D11Texture2D> &source, bool forceIdrFrame);
     void GetEncodedData(std::vector<NvencEncodedData> &data);
     const uint32_t GetWidth() const { return desc_.width; }
     const uint32_t GetHeight() const { return desc_.height; }
     const uint32_t GetFrameRate() const { return desc_.frameRate; }
+
 
 private:
     void ThrowErrorIfNotInitialized();
@@ -71,7 +73,10 @@ private:
     unsigned long GetInputIndex() const { return inputIndex_ % GetResourceCount(); }
     unsigned long GetOutputIndex() const { return outputIndex_ % GetResourceCount(); }
 
-    const NvencDesc desc_;
+    NvencDesc desc_;
+	NV_ENC_INITIALIZE_PARAMS initializeParams_ = { NV_ENC_INITIALIZE_PARAMS_VER };
+	NV_ENC_CONFIG encodeConfig_ = { NV_ENC_CONFIG_VER };
+
     bool isInitialized_ = false;
     void *encoder_ = nullptr;
     uint64_t inputIndex_ = 0U;

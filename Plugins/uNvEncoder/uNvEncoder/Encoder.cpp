@@ -89,6 +89,7 @@ void Encoder::CreateDevice()
 
 void Encoder::DestroyDevice()
 {
+	if(device_) device_->Release();
     device_ = nullptr;
 }
 
@@ -111,6 +112,21 @@ void Encoder::DestroyNvenc()
 {
     nvenc_->Finalize();
     nvenc_.reset();
+}
+
+void Encoder::Resize(uint32_t width, uint32_t height)
+{
+	desc_.width = width;
+	desc_.height = height;
+
+	try
+	{
+		nvenc_->Resize(width, height);
+	}
+	catch (const std::exception & e)
+	{
+		error_ = e.what();
+	}
 }
 
 
