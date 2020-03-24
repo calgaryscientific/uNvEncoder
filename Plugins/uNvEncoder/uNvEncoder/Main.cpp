@@ -35,9 +35,9 @@ UNITY_INTERFACE_EXPORT void UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces
     g_unity = unityInterfaces;
 
 #if _DEBUG
-	FILE* pConsole;
-	AllocConsole();
-	freopen_s(&pConsole, "CONOUT$", "wb", stdout);
+    FILE* pConsole;
+    AllocConsole();
+    freopen_s(&pConsole, "CONOUT$", "wb", stdout);
 #endif
 }
 
@@ -89,9 +89,9 @@ UNITY_INTERFACE_EXPORT bool UNITY_INTERFACE_API uNvEncoderIsValid(EncoderId id)
 UNITY_INTERFACE_EXPORT int UNITY_INTERFACE_API uNvEncoderGetWidth(EncoderId id)
 {
     const auto &encoder = GetEncoder(id);
-	
-	int width = encoder ? static_cast<int>(encoder->GetWidth()) : 0;
-	return width;
+    
+    int width = encoder ? static_cast<int>(encoder->GetWidth()) : 0;
+    return width;
 }
 
 
@@ -127,11 +127,11 @@ UNITY_INTERFACE_EXPORT bool UNITY_INTERFACE_API uNvEncoderEncode(EncoderId id, I
 
 UNITY_INTERFACE_EXPORT void UNITY_INTERFACE_API uNvEncoderResize(EncoderId id, uint32_t width, uint32_t height)
 {
-	::fprintf(stdout, "Resize %d, %d\n", width, height);
-	if (const auto& encoder = GetEncoder(id))
-	{
-		return encoder->Resize(width, height);
-	}
+    ::fprintf(stdout, "Resize %d, %d\n", width, height);
+    if (const auto& encoder = GetEncoder(id))
+    {
+        return encoder->Resize(width, height);
+    }
 }
 
 

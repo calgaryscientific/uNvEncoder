@@ -43,7 +43,7 @@ public:
     bool HasError() const { return !error_.empty(); }
     const std::string & GetError() const { return error_; }
     void ClearError() { error_.clear(); }
-	void Resize(uint32_t width, uint32_t height);
+    void Resize(uint32_t width, uint32_t height);
 
 private:
     void CreateDevice();
