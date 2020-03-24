@@ -34,9 +34,11 @@ UNITY_INTERFACE_EXPORT void UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces
 {
     g_unity = unityInterfaces;
 
+#if _DEBUG
 	FILE* pConsole;
 	AllocConsole();
 	freopen_s(&pConsole, "CONOUT$", "wb", stdout);
+#endif
 }
 
 
@@ -89,7 +91,6 @@ UNITY_INTERFACE_EXPORT int UNITY_INTERFACE_API uNvEncoderGetWidth(EncoderId id)
     const auto &encoder = GetEncoder(id);
 	
 	int width = encoder ? static_cast<int>(encoder->GetWidth()) : 0;
-	::fprintf(stdout, "uNvEncoderGetWidth %d\n", width);
 	return width;
 }
 

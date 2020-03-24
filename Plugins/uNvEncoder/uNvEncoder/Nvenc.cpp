@@ -182,24 +182,24 @@ void Nvenc::Resize(const uint32_t width, const uint32_t height)
 	if (desc_.width == width && desc_.height == height) return;
 
 	EndEncode();
-	::fprintf(stdout, "EndEncode");
+	::fprintf(stdout, "EndEncode\n");
 
 	DestroyBitstreamBuffers();
-	::fprintf(stdout, "DestroyBitStream");
+	::fprintf(stdout, "DestroyBitStream\n");
 
 	UnregisterResources();
-	::fprintf(stdout, "Unregister resources");
+	::fprintf(stdout, "Unregister resource\ns");
 
 	
 
 	NV_ENC_RECONFIGURE_PARAMS reconfigureParams = { NV_ENC_RECONFIGURE_PARAMS_VER };
 	memcpy(&reconfigureParams.reInitEncodeParams, &initializeParams_, sizeof(initializeParams_));
-	::fprintf(stdout, "reconfigureParams.reInitEncodeParams %p", &reconfigureParams.reInitEncodeParams);
+	::fprintf(stdout, "reconfigureParams.reInitEncodeParams %p\n", &reconfigureParams.reInitEncodeParams);
 
 	NV_ENC_CONFIG reInitCodecConfig = { NV_ENC_CONFIG_VER };
 
 	memcpy(&reInitCodecConfig, initializeParams_.encodeConfig, sizeof(reInitCodecConfig));
-	::fprintf(stdout, "reInitCodecConfig %p", &reInitCodecConfig);
+	::fprintf(stdout, "reInitCodecConfig %p\n", &reInitCodecConfig);
 
 	reconfigureParams.reInitEncodeParams.encodeConfig = &reInitCodecConfig;
 
@@ -209,17 +209,20 @@ void Nvenc::Resize(const uint32_t width, const uint32_t height)
 	reconfigureParams.reInitEncodeParams.darWidth = width;
 	reconfigureParams.reInitEncodeParams.darHeight = height;
 
-	::fprintf(stdout, "reInitCodecConfig %p", encoder_);
+	::fprintf(stdout, "reInitCodecConfig %p\n", encoder_);
 	CALL_NVENC_API(s_nvenc.nvEncReconfigureEncoder, encoder_, &reconfigureParams);
 
 	desc_.width = width;
 	desc_.height = height;
 
-	::fprintf(stdout, "CreateInputTextures");
+	::fprintf(stdout, "CreateInputTextures\n");
 	CreateInputTextures();
 
-	::fprintf(stdout, "Register resources");
+	::fprintf(stdout, "Register resources\n");
 	RegisterResources();
+
+	::fprintf(stdout, "CreateBitstreamBuffers\n");
+	CreateBitstreamBuffers();
 }
 
 
@@ -413,7 +416,7 @@ void Nvenc::Encode(const ComPtr<ID3D11Texture2D> &source, bool forceIdrFrame)
 
     if (resource.isEncoding_) 
     {
-        ThrowError("The previous encode is still continuing.");
+		return;
     }
     resource.isEncoding_ = true;
 
