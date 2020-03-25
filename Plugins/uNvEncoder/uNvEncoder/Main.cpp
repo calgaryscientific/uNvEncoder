@@ -2,6 +2,7 @@
 #include <map>
 #include <d3d11.h>
 #include <IUnityInterface.h>
+#include <IUnityRenderingExtensions.h>
 #include "Encoder.h"
 #include "Nvenc.h"
 
@@ -208,5 +209,24 @@ UNITY_INTERFACE_EXPORT void UNITY_INTERFACE_API uNvEncoderClearError(EncoderId i
     }
 }
 
+UNITY_INTERFACE_EXPORT void UNITY_INTERFACE_API uNvEncoderSetPrimarySource(EncoderId id, ID3D11Texture2D* texture)
+{
+	if (const auto& encoder = GetEncoder(id))
+	{
+		encoder->SetPrimarySource(ComPtr<ID3D11Texture2D>(texture));
+	}
+}
 
+void UNITY_INTERFACE_API uNvEncoderEncodePrimarySource(int id)
+{
+	if (const auto& encoder = GetEncoder(id))
+	{
+		encoder->EncodePrimarySource(false);
+	}
+}
+
+UNITY_INTERFACE_EXPORT UnityRenderingEvent  UNITY_INTERFACE_API uNvEncoderGetEncodePrimarySourceEvent()
+{
+	return uNvEncoderEncodePrimarySource;
+}
 }

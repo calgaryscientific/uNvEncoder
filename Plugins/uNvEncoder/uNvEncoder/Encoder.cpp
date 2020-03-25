@@ -159,11 +159,28 @@ void Encoder::StopThread()
 }
 
 
+void Encoder::SetPrimarySource(const ComPtr<ID3D11Texture2D>& source)
+{
+	primarySource_ = ComPtr<ID3D11Texture2D>(source.Get());
+}
+
+bool Encoder::EncodePrimarySource(bool forceIdrFrame)
+{
+	if (primarySource_.Get() == nullptr)
+	{
+		::fprintf(stdout, "Missing call to SetPrimarySource.");
+		return false;
+	}
+
+	return Encode(primarySource_, forceIdrFrame);
+}
+
 bool Encoder::Encode(const ComPtr<ID3D11Texture2D> &source, bool forceIdrFrame)
 {
     try
     {
-        nvenc_->Encode(source, forceIdrFrame);
+        bool result = nvenc_->Encode(source, forceIdrFrame);
+		if (!result) return false;
     }
     catch (const std::exception& e)
     {        

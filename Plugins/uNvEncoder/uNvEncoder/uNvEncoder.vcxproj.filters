@@ -11,5 +11,6 @@
     <ClInclude Include="nvEncodeAPI.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Encoder.h" />
+    <ClInclude Include="Unity\IUnityRenderingExtensions.h" />
   </ItemGroup>
 </Project>

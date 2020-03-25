@@ -407,7 +407,7 @@ void Nvenc::DestroyEncoder()
 }
 
 
-void Nvenc::Encode(const ComPtr<ID3D11Texture2D> &source, bool forceIdrFrame)
+bool Nvenc::Encode(const ComPtr<ID3D11Texture2D> &source, bool forceIdrFrame)
 {
     ThrowErrorIfNotInitialized();
 
@@ -416,25 +416,32 @@ void Nvenc::Encode(const ComPtr<ID3D11Texture2D> &source, bool forceIdrFrame)
 
     if (resource.isEncoding_) 
     {
-        return;
+		return false;
     }
     resource.isEncoding_ = true;
 
-    CopyToInputTexture(index, source);
+	if (!CopyToInputTexture(index, source))
+	{
+		resource.isEncoding_ = false;
+		return false;
+	}
+
     MapInputResource(index);
 
     if (EncodeInputTexture(index, forceIdrFrame)) 
     {
         ++inputIndex_;
+		return true;
     }
     else
     {
         resource.isEncoding_ = false;
+		return false;
     }
 }
 
 
-void Nvenc::CopyToInputTexture(int index, const ComPtr<ID3D11Texture2D> &texture)
+bool Nvenc::CopyToInputTexture(int index, const ComPtr<ID3D11Texture2D> &texture)
 {
     ThrowErrorIfNotInitialized();
 
@@ -446,14 +453,17 @@ void Nvenc::CopyToInputTexture(int index, const ComPtr<ID3D11Texture2D> &texture
         __uuidof(ID3D11Texture2D),
         &inputTexture)))
     {
-        ThrowError("Failed to open shared texture from shared handle.");
-        return;
+		::fprintf(stdout, "Unable to open shared texture, %d", GetLastError());
+		return false;
     }
 
     ComPtr<ID3D11DeviceContext> context;
     GetUnityDevice()->GetImmediateContext(&context);
     context->CopyResource(inputTexture.Get(), texture.Get());
     context->Flush();
+
+	inputTexture->Release();
+	return true;
 }
 
 

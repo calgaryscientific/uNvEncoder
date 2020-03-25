@@ -45,6 +45,9 @@ public:
     void ClearError() { error_.clear(); }
     void Resize(uint32_t width, uint32_t height);
 
+	void SetPrimarySource(const ComPtr<ID3D11Texture2D>& source);
+	bool EncodePrimarySource(bool forceIdrFrame);
+
 private:
     void CreateDevice();
     void DestroyDevice();
@@ -68,6 +71,7 @@ private:
     bool shouldStopEncodeThread_ = false;
     bool isEncodeRequested = false;
     std::string error_;
+	ComPtr<ID3D11Texture2D> primarySource_;
 };
 
 
