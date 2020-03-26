@@ -257,9 +257,9 @@ void Nvenc::InitializeEncoder()
     memcpy(&config, &presetConfig.presetCfg, sizeof(NV_ENC_CONFIG));
     config.profileGUID = NV_ENC_H264_PROFILE_BASELINE_GUID;
     config.frameIntervalP = 1;
-    config.gopLength = NVENC_INFINITE_GOPLENGTH;
+    config.gopLength = 2 * desc_.frameRate;
     config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_VBR;
-    config.rcParams.targetQuality = 20;
+    config.rcParams.targetQuality = 18;
     config.rcParams.maxBitRate = bitRate;
     initParams.encodeConfig = &config;
 
