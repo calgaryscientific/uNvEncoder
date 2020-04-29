@@ -172,6 +172,7 @@
     <ClInclude Include="Encoder.h" />
     <ClInclude Include="Nvenc.h" />
     <ClInclude Include="nvEncodeAPI.h" />
+    <ClInclude Include="Unity\IUnityRenderingExtensions.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

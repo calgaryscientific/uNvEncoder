@@ -2,6 +2,7 @@
 #include <map>
 #include <d3d11.h>
 #include <IUnityInterface.h>
+#include <IUnityRenderingExtensions.h>
 #include "Encoder.h"
 #include "Nvenc.h"
 
@@ -33,6 +34,12 @@ extern "C"
 UNITY_INTERFACE_EXPORT void UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces* unityInterfaces)
 {
     g_unity = unityInterfaces;
+
+#if _DEBUG
+    FILE* pConsole;
+    AllocConsole();
+    freopen_s(&pConsole, "CONOUT$", "wb", stdout);
+#endif
 }
 
 
@@ -83,7 +90,9 @@ UNITY_INTERFACE_EXPORT bool UNITY_INTERFACE_API uNvEncoderIsValid(EncoderId id)
 UNITY_INTERFACE_EXPORT int UNITY_INTERFACE_API uNvEncoderGetWidth(EncoderId id)
 {
     const auto &encoder = GetEncoder(id);
-    return encoder ? static_cast<int>(encoder->GetWidth()) : 0;
+    
+    int width = encoder ? static_cast<int>(encoder->GetWidth()) : 0;
+    return width;
 }
 
 
@@ -116,6 +125,16 @@ UNITY_INTERFACE_EXPORT bool UNITY_INTERFACE_API uNvEncoderEncode(EncoderId id, I
     }
     return false;
 }
+
+UNITY_INTERFACE_EXPORT void UNITY_INTERFACE_API uNvEncoderResize(EncoderId id, uint32_t width, uint32_t height)
+{
+    ::fprintf(stdout, "Resize %d, %d\n", width, height);
+    if (const auto& encoder = GetEncoder(id))
+    {
+        return encoder->Resize(width, height);
+    }
+}
+
 
 
 UNITY_INTERFACE_EXPORT bool UNITY_INTERFACE_API uNvEncoderEncodeSharedHandle(EncoderId id, HANDLE handle, bool forceIdrFrame)
@@ -190,5 +209,24 @@ UNITY_INTERFACE_EXPORT void UNITY_INTERFACE_API uNvEncoderClearError(EncoderId i
     }
 }
 
+UNITY_INTERFACE_EXPORT void UNITY_INTERFACE_API uNvEncoderSetPrimarySource(EncoderId id, ID3D11Texture2D* texture)
+{
+	if (const auto& encoder = GetEncoder(id))
+	{
+		encoder->SetPrimarySource(ComPtr<ID3D11Texture2D>(texture));
+	}
+}
 
+void UNITY_INTERFACE_API uNvEncoderEncodePrimarySource(int id)
+{
+	if (const auto& encoder = GetEncoder(id))
+	{
+		encoder->EncodePrimarySource(false);
+	}
+}
+
+UNITY_INTERFACE_EXPORT UnityRenderingEvent  UNITY_INTERFACE_API uNvEncoderGetEncodePrimarySourceEvent()
+{
+	return uNvEncoderEncodePrimarySource;
+}
 }

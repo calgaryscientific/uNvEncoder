@@ -177,6 +177,55 @@ void Nvenc::OpenEncodeSession()
     CALL_NVENC_API(s_nvenc.nvEncOpenEncodeSessionEx, &encSessionParams, &encoder_);
 }
 
+void Nvenc::Resize(const uint32_t width, const uint32_t height)
+{
+    if (desc_.width == width && desc_.height == height) return;
+
+    EndEncode();
+    ::fprintf(stdout, "EndEncode\n");
+
+    DestroyBitstreamBuffers();
+    ::fprintf(stdout, "DestroyBitStream\n");
+
+    UnregisterResources();
+    ::fprintf(stdout, "Unregister resource\ns");
+
+    
+
+    NV_ENC_RECONFIGURE_PARAMS reconfigureParams = { NV_ENC_RECONFIGURE_PARAMS_VER };
+    memcpy(&reconfigureParams.reInitEncodeParams, &initializeParams_, sizeof(initializeParams_));
+    ::fprintf(stdout, "reconfigureParams.reInitEncodeParams %p\n", &reconfigureParams.reInitEncodeParams);
+
+    NV_ENC_CONFIG reInitCodecConfig = { NV_ENC_CONFIG_VER };
+
+    memcpy(&reInitCodecConfig, initializeParams_.encodeConfig, sizeof(reInitCodecConfig));
+    ::fprintf(stdout, "reInitCodecConfig %p\n", &reInitCodecConfig);
+
+    reconfigureParams.reInitEncodeParams.encodeConfig = &reInitCodecConfig;
+
+    
+    reconfigureParams.reInitEncodeParams.encodeWidth = width;
+    reconfigureParams.reInitEncodeParams.encodeHeight = height;
+    reconfigureParams.reInitEncodeParams.darWidth = width;
+    reconfigureParams.reInitEncodeParams.darHeight = height;
+
+    ::fprintf(stdout, "reInitCodecConfig %p\n", encoder_);
+    CALL_NVENC_API(s_nvenc.nvEncReconfigureEncoder, encoder_, &reconfigureParams);
+
+    desc_.width = width;
+    desc_.height = height;
+
+    ::fprintf(stdout, "CreateInputTextures\n");
+    CreateInputTextures();
+
+    ::fprintf(stdout, "Register resources\n");
+    RegisterResources();
+
+    ::fprintf(stdout, "CreateBitstreamBuffers\n");
+    CreateBitstreamBuffers();
+}
+
+
 
 void Nvenc::InitializeEncoder()
 {
@@ -192,21 +241,26 @@ void Nvenc::InitializeEncoder()
     initParams.enablePTD = 1;
     initParams.reportSliceOffsets = 0;
     initParams.enableSubFrameWrite = 0;
-    initParams.maxEncodeWidth = desc_.width;
-    initParams.maxEncodeHeight = desc_.height;
+    initParams.maxEncodeWidth = 4096;
+    initParams.maxEncodeHeight = 4096;
     initParams.enableMEOnlyMode = false;
     initParams.enableOutputInVidmem = false;
     initParams.enableEncodeAsync = true;
+
+    uint32_t bitRate = (static_cast<unsigned int>(12.0f * desc_.width * desc_.height) / (1920 * 1080))* (100 * 10000);
+
 
     NV_ENC_PRESET_CONFIG presetConfig = { NV_ENC_PRESET_CONFIG_VER, { NV_ENC_CONFIG_VER } };
     CALL_NVENC_API(s_nvenc.nvEncGetEncodePresetConfig, encoder_, initParams.encodeGUID, initParams.presetGUID, &presetConfig);
 
     NV_ENC_CONFIG config = { NV_ENC_CONFIG_VER };
     memcpy(&config, &presetConfig.presetCfg, sizeof(NV_ENC_CONFIG));
-    config.profileGUID = NV_ENC_H264_PROFILE_HIGH_GUID;
+    config.profileGUID = NV_ENC_H264_PROFILE_BASELINE_GUID;
     config.frameIntervalP = 1;
-    config.gopLength = NVENC_INFINITE_GOPLENGTH;
-    config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR_HQ;
+    config.gopLength = 2 * desc_.frameRate;
+    config.rcParams.rateControlMode = NV_ENC_PARAMS_RC_VBR;
+    config.rcParams.targetQuality = 18;
+    config.rcParams.maxBitRate = bitRate;
     initParams.encodeConfig = &config;
 
     config.encodeCodecConfig.h264Config.repeatSPSPPS = 1;
@@ -214,6 +268,11 @@ void Nvenc::InitializeEncoder()
     config.encodeCodecConfig.h264Config.idrPeriod = config.gopLength;
 
     CALL_NVENC_API(s_nvenc.nvEncInitializeEncoder, encoder_, &initParams);
+
+    memcpy(&encodeConfig_, &config, sizeof(config));
+    memcpy(&initializeParams_, &initParams, sizeof(initializeParams_));
+
+    initializeParams_.encodeConfig = &encodeConfig_;
 }
 
 
@@ -348,7 +407,7 @@ void Nvenc::DestroyEncoder()
 }
 
 
-void Nvenc::Encode(const ComPtr<ID3D11Texture2D> &source, bool forceIdrFrame)
+bool Nvenc::Encode(const ComPtr<ID3D11Texture2D> &source, bool forceIdrFrame)
 {
     ThrowErrorIfNotInitialized();
 
@@ -357,25 +416,32 @@ void Nvenc::Encode(const ComPtr<ID3D11Texture2D> &source, bool forceIdrFrame)
 
     if (resource.isEncoding_) 
     {
-        ThrowError("The previous encode is still continuing.");
+		return false;
     }
     resource.isEncoding_ = true;
 
-    CopyToInputTexture(index, source);
+	if (!CopyToInputTexture(index, source))
+	{
+		resource.isEncoding_ = false;
+		return false;
+	}
+
     MapInputResource(index);
 
     if (EncodeInputTexture(index, forceIdrFrame)) 
     {
         ++inputIndex_;
+		return true;
     }
     else
     {
         resource.isEncoding_ = false;
+		return false;
     }
 }
 
 
-void Nvenc::CopyToInputTexture(int index, const ComPtr<ID3D11Texture2D> &texture)
+bool Nvenc::CopyToInputTexture(int index, const ComPtr<ID3D11Texture2D> &texture)
 {
     ThrowErrorIfNotInitialized();
 
@@ -387,14 +453,17 @@ void Nvenc::CopyToInputTexture(int index, const ComPtr<ID3D11Texture2D> &texture
         __uuidof(ID3D11Texture2D),
         &inputTexture)))
     {
-        ThrowError("Failed to open shared texture from shared handle.");
-        return;
+		::fprintf(stdout, "Unable to open shared texture, %d", GetLastError());
+		return false;
     }
 
     ComPtr<ID3D11DeviceContext> context;
     GetUnityDevice()->GetImmediateContext(&context);
     context->CopyResource(inputTexture.Get(), texture.Get());
     context->Flush();
+
+	inputTexture->Release();
+	return true;
 }
 
 

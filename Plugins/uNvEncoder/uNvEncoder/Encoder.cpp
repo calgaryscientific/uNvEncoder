@@ -17,7 +17,9 @@ Encoder::Encoder(const EncoderDesc &desc)
     }
     catch (const std::exception& e)
     {
+        
         error_ = e.what();
+        ::fprintf(stdout, "Encoder %s", error_.c_str());
     }
 }
 
@@ -31,8 +33,9 @@ Encoder::~Encoder()
         DestroyDevice();
     }
     catch (const std::exception& e)
-    {
+    {        
         error_ = e.what();
+        ::fprintf(stdout, "~Encoder %s", error_.c_str());
     }
 }
 
@@ -89,6 +92,7 @@ void Encoder::CreateDevice()
 
 void Encoder::DestroyDevice()
 {
+    if(device_) device_->Release();
     device_ = nullptr;
 }
 
@@ -111,6 +115,22 @@ void Encoder::DestroyNvenc()
 {
     nvenc_->Finalize();
     nvenc_.reset();
+}
+
+void Encoder::Resize(uint32_t width, uint32_t height)
+{
+    desc_.width = width;
+    desc_.height = height;
+
+    try
+    {
+        nvenc_->Resize(width, height);
+    }
+    catch (const std::exception & e)
+    {        
+        error_ = e.what();
+        ::fprintf(stdout, "Resize %s", error_.c_str());
+    }
 }
 
 
@@ -139,15 +159,33 @@ void Encoder::StopThread()
 }
 
 
+void Encoder::SetPrimarySource(const ComPtr<ID3D11Texture2D>& source)
+{
+	primarySource_ = ComPtr<ID3D11Texture2D>(source.Get());
+}
+
+bool Encoder::EncodePrimarySource(bool forceIdrFrame)
+{
+	if (primarySource_.Get() == nullptr)
+	{
+		::fprintf(stdout, "Missing call to SetPrimarySource.");
+		return false;
+	}
+
+	return Encode(primarySource_, forceIdrFrame);
+}
+
 bool Encoder::Encode(const ComPtr<ID3D11Texture2D> &source, bool forceIdrFrame)
 {
     try
     {
-        nvenc_->Encode(source, forceIdrFrame);
+        bool result = nvenc_->Encode(source, forceIdrFrame);
+		if (!result) return false;
     }
     catch (const std::exception& e)
-    {
+    {        
         error_ = e.what();
+        ::fprintf(stdout, "Encoder::Encode %s", error_.c_str());
         return false;
     }
 
@@ -200,6 +238,7 @@ void Encoder::UpdateGetEncodedData()
     }
     catch (const std::exception& e)
     {
+        ::fprintf(stdout, "GetEncodedData %s", error_.c_str());
         error_ = e.what();
         return;
     }
